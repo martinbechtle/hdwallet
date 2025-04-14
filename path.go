@@ -13,6 +13,9 @@ const (
 )
 
 var (
+	EvmDefaultDerivationPath    = NewBIP44Path(60, 0, 0, 0)
+	SolanaDefaultDerivationPath = NewBIP44Path(501, 0, 0, 0)
+
 	// Valid path formats:
 	// m/44'/60'/0'/0/0
 	// m/44h/60h/0h/0/0
@@ -20,8 +23,6 @@ var (
 	// 44'/60'/0'/0/0
 	pathRegex = regexp.MustCompile(`^(m/)?(\d+'?H?h?/)*(\d+'?H?h?)$`)
 )
-
-// TODO verify this regexp
 
 // PathComponent represents a single segment in a derivation path
 type PathComponent struct {
@@ -32,6 +33,7 @@ type PathComponent struct {
 // DerivationPath represents a complete BIP44 derivation path
 type DerivationPath struct {
 	Components []PathComponent
+	// TODO I don't like this, let's see after implementing a few derivation algorithms how we can push these out
 	Purpose    uint8  // BIP44 = 44, BIP49 = 49, BIP84 = 84, etc.
 	CoinType   uint32 // Bitcoin = 0, Ethereum = 60, etc.
 	Account    uint32
@@ -49,9 +51,7 @@ func ParseDerivationPath(path string) (DerivationPath, error) {
 	}
 
 	// Remove the leading "m/" if present
-	if strings.HasPrefix(path, "m/") {
-		path = path[2:]
-	}
+	path = strings.TrimPrefix(path, "m/")
 	components := strings.Split(path, "/")
 	if len(components) > maxPathDepth {
 		return DerivationPath{}, fmt.Errorf("derivation path too deep (max %d levels)", maxPathDepth)
@@ -60,7 +60,6 @@ func ParseDerivationPath(path string) (DerivationPath, error) {
 	result := DerivationPath{
 		Components: make([]PathComponent, len(components)),
 	}
-	// TODO double check this logic against known libraries and unit test
 
 	for i, part := range components {
 		// Check for hardened component (suffixed with ', h, or H)
@@ -81,7 +80,6 @@ func ParseDerivationPath(path string) (DerivationPath, error) {
 	}
 
 	// Extract BIP44 components if available
-	// TODO doesn't seem right... does it mean we should limit the depth?
 	if len(result.Components) >= 1 {
 		if result.Components[0].Hardened {
 			result.Purpose = uint8(result.Components[0].Index)
@@ -120,7 +118,17 @@ func (p DerivationPath) String() string {
 	return "m/" + strings.Join(parts, "/")
 }
 
-// TODO probably best to have constants for these? Add EVM and SVM to begin with
+func (p DerivationPath) Indices() []uint32 {
+	indices := make([]uint32, len(p.Components))
+	for i, component := range p.Components {
+		index := component.Index
+		if component.Hardened {
+			index |= 0x80000000
+		}
+		indices[i] = index
+	}
+	return indices
+}
 
 // NewBIP44Path creates a standard BIP44 path
 func NewBIP44Path(coinType, account, change, addressIdx uint32) DerivationPath {
@@ -140,56 +148,11 @@ func NewBIP44Path(coinType, account, change, addressIdx uint32) DerivationPath {
 	}
 }
 
-// NewSolanaPath creates a Solana-style path (all hardened)
-func NewSolanaPath(account, change, addressIdx uint32) DerivationPath {
-	return DerivationPath{
-		Components: []PathComponent{
-			{Index: 44, Hardened: true},
-			{Index: 501, Hardened: true}, // Solana coin type
-			{Index: account, Hardened: true},
-			{Index: change, Hardened: true},
-			{Index: addressIdx, Hardened: true},
-		},
-		Purpose:    44,
-		CoinType:   501,
-		Account:    account,
-		Change:     change,
-		AddressIdx: addressIdx,
-	}
-}
-
-// IsValid checks if the derivation path follows BIP44 standards
-func (p DerivationPath) IsValid() bool {
-	// Basic validation
-	if len(p.Components) == 0 {
-		return true // Master key is valid
-	}
-
-	// Check if purpose is hardened
-	if len(p.Components) >= 1 && !p.Components[0].Hardened {
-		return false
-	}
-
-	// Check if coin type is hardened
-	if len(p.Components) >= 2 && !p.Components[1].Hardened {
-		return false
-	}
-
-	// Check if account is hardened
-	if len(p.Components) >= 3 && !p.Components[2].Hardened {
-		return false
-	}
-
-	// Further validation based on specific BIP44 rules could be added here
-	return true
-}
-
 // IsBIP44 checks if this is a standard BIP44 path
 func (p DerivationPath) IsBIP44() bool {
 	if len(p.Components) != 5 {
 		return false
 	}
-
 	// m/44'/coinType'/account'/change/address
 	return p.Components[0].Index == 44 &&
 		p.Components[0].Hardened &&
@@ -197,25 +160,4 @@ func (p DerivationPath) IsBIP44() bool {
 		p.Components[2].Hardened &&
 		!p.Components[3].Hardened &&
 		!p.Components[4].Hardened
-}
-
-// RequiresHardenedDerivation checks if this path requires curves that support
-// hardened derivation (like ed25519)
-func (p DerivationPath) RequiresHardenedDerivation() bool {
-	for _, component := range p.Components {
-		if component.Hardened {
-			return true
-		}
-	}
-	return false
-}
-
-// AllComponentsHardened checks if all components in the path are hardened
-func (p DerivationPath) AllComponentsHardened() bool {
-	for _, component := range p.Components {
-		if !component.Hardened {
-			return false
-		}
-	}
-	return true
 }
