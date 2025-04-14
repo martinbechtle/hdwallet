@@ -1,4 +1,4 @@
-module github.com/MartinBechtle/hdwallet
+module github.com/martin-bechtle/hdwallet
 
 go 1.24.2
 

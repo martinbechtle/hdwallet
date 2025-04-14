@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/MartinBechtle/hdwallet"
+	"github.com/martin-bechtle/hdwallet"
 	"github.com/stretchr/testify/require"
 )
 
