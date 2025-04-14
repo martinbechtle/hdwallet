@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/martin-bechtle/hdwallet"
+	"github.com/martinbechtle/hdwallet"
 	"github.com/stretchr/testify/require"
 )
 
