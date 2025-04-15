@@ -13,8 +13,8 @@ const (
 )
 
 var (
-	EvmDefaultDerivationPath    = NewBIP44Path(60, 0, 0, 0)
-	SolanaDefaultDerivationPath = NewBIP44Path(501, 0, 0, 0)
+	EvmDefaultDerivationPath    = MustParseDerivationPath("m/44'/60'/0'/0/0")
+	SolanaDefaultDerivationPath = MustParseDerivationPath("m/44'/501'/0'/0'")
 
 	// Valid path formats:
 	// m/44'/60'/0'/0/0
@@ -33,7 +33,9 @@ type PathComponent struct {
 // DerivationPath represents a complete BIP44 derivation path
 type DerivationPath struct {
 	Components []PathComponent
-	// TODO I don't like this, let's see after implementing a few derivation algorithms how we can push these out
+}
+
+type BipComponents struct {
 	Purpose    uint8  // BIP44 = 44, BIP49 = 49, BIP84 = 84, etc.
 	CoinType   uint32 // Bitcoin = 0, Ethereum = 60, etc.
 	Account    uint32
@@ -78,31 +80,16 @@ func ParseDerivationPath(path string) (DerivationPath, error) {
 			Hardened: hardened,
 		}
 	}
-
-	// Extract BIP44 components if available
-	if len(result.Components) >= 1 {
-		if result.Components[0].Hardened {
-			result.Purpose = uint8(result.Components[0].Index)
-		}
-	}
-	if len(result.Components) >= 2 {
-		if result.Components[1].Hardened {
-			result.CoinType = result.Components[1].Index
-		}
-	}
-	if len(result.Components) >= 3 {
-		if result.Components[2].Hardened {
-			result.Account = result.Components[2].Index
-		}
-	}
-	if len(result.Components) >= 4 {
-		result.Change = result.Components[3].Index
-	}
-	if len(result.Components) >= 5 {
-		result.AddressIdx = result.Components[4].Index
-	}
-
 	return result, nil
+}
+
+// MustParseDerivationPath same as ParseDerivationPath but panics on error
+func MustParseDerivationPath(path string) DerivationPath {
+	result, err := ParseDerivationPath(path)
+	if err != nil {
+		panic(err)
+	}
+	return result
 }
 
 // String returns the string representation of the derivation path
@@ -130,34 +117,28 @@ func (p DerivationPath) Indices() []uint32 {
 	return indices
 }
 
-// NewBIP44Path creates a standard BIP44 path
-func NewBIP44Path(coinType, account, change, addressIdx uint32) DerivationPath {
-	return DerivationPath{
-		Components: []PathComponent{
-			{Index: 44, Hardened: true},
-			{Index: coinType, Hardened: true},
-			{Index: account, Hardened: true},
-			{Index: change, Hardened: false},
-			{Index: addressIdx, Hardened: false},
-		},
-		Purpose:    44,
-		CoinType:   coinType,
-		Account:    account,
-		Change:     change,
-		AddressIdx: addressIdx,
+func (p DerivationPath) BipComponents() BipComponents {
+	result := BipComponents{}
+	if len(p.Components) >= 1 {
+		if p.Components[0].Hardened {
+			result.Purpose = uint8(p.Components[0].Index)
+		}
 	}
-}
-
-// IsBIP44 checks if this is a standard BIP44 path
-func (p DerivationPath) IsBIP44() bool {
-	if len(p.Components) != 5 {
-		return false
+	if len(p.Components) >= 2 {
+		if p.Components[1].Hardened {
+			result.CoinType = p.Components[1].Index
+		}
 	}
-	// m/44'/coinType'/account'/change/address
-	return p.Components[0].Index == 44 &&
-		p.Components[0].Hardened &&
-		p.Components[1].Hardened &&
-		p.Components[2].Hardened &&
-		!p.Components[3].Hardened &&
-		!p.Components[4].Hardened
+	if len(p.Components) >= 3 {
+		if p.Components[2].Hardened {
+			result.Account = p.Components[2].Index
+		}
+	}
+	if len(p.Components) >= 4 {
+		result.Change = p.Components[3].Index
+	}
+	if len(p.Components) >= 5 {
+		result.AddressIdx = p.Components[4].Index
+	}
+	return result
 }

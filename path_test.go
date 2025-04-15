@@ -36,11 +36,6 @@ func TestParseDerivationPath(t *testing.T) {
 					{Index: 0, Hardened: false},
 					{Index: 0, Hardened: false},
 				},
-				Purpose:    44,
-				CoinType:   60,
-				Account:    0,
-				Change:     0,
-				AddressIdx: 0,
 			},
 		},
 		{
@@ -54,11 +49,6 @@ func TestParseDerivationPath(t *testing.T) {
 					{Index: 0, Hardened: false},
 					{Index: 0, Hardened: false},
 				},
-				Purpose:    44,
-				CoinType:   60,
-				Account:    0,
-				Change:     0,
-				AddressIdx: 0,
 			},
 		},
 		{
@@ -72,11 +62,6 @@ func TestParseDerivationPath(t *testing.T) {
 					{Index: 0, Hardened: false},
 					{Index: 0, Hardened: false},
 				},
-				Purpose:    44,
-				CoinType:   60,
-				Account:    0,
-				Change:     0,
-				AddressIdx: 0,
 			},
 		},
 		{
@@ -90,11 +75,6 @@ func TestParseDerivationPath(t *testing.T) {
 					{Index: 0, Hardened: false},
 					{Index: 0, Hardened: false},
 				},
-				Purpose:    44,
-				CoinType:   60,
-				Account:    0,
-				Change:     0,
-				AddressIdx: 0,
 			},
 		},
 		{
@@ -106,9 +86,6 @@ func TestParseDerivationPath(t *testing.T) {
 					{Index: 60, Hardened: true},
 					{Index: 0, Hardened: true},
 				},
-				Purpose:  44,
-				CoinType: 60,
-				Account:  0,
 			},
 		},
 		{
@@ -195,69 +172,23 @@ func TestDerivationPath_Indices(t *testing.T) {
 	require.Equal(t, []uint32{2147483692, 2147483708, 2147483648, 0, 0}, indices) // first three are hardened
 }
 
-func TestDerivationPath_IsBIP44(t *testing.T) {
-	tests := []struct {
-		name string
-		path hdwallet.DerivationPath
-		want bool
-	}{
-		{
-			name: "valid BIP44",
-			path: hdwallet.DerivationPath{
-				Components: []hdwallet.PathComponent{
-					{Index: 44, Hardened: true},
-					{Index: 60, Hardened: true},
-					{Index: 0, Hardened: true},
-					{Index: 0, Hardened: false},
-					{Index: 0, Hardened: false},
-				},
-			},
-			want: true,
-		},
-		{
-			name: "wrong purpose",
-			path: hdwallet.DerivationPath{
-				Components: []hdwallet.PathComponent{
-					{Index: 49, Hardened: true},
-					{Index: 60, Hardened: true},
-					{Index: 0, Hardened: true},
-					{Index: 0, Hardened: false},
-					{Index: 0, Hardened: false},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "wrong hardening pattern",
-			path: hdwallet.DerivationPath{
-				Components: []hdwallet.PathComponent{
-					{Index: 44, Hardened: true},
-					{Index: 60, Hardened: true},
-					{Index: 0, Hardened: true},
-					{Index: 0, Hardened: true}, // Should be non-hardened
-					{Index: 0, Hardened: false},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "too short",
-			path: hdwallet.DerivationPath{
-				Components: []hdwallet.PathComponent{
-					{Index: 44, Hardened: true},
-					{Index: 60, Hardened: true},
-					{Index: 0, Hardened: true},
-				},
-			},
-			want: false,
+func TestDerivationPath_BipComponents(t *testing.T) {
+	path := hdwallet.DerivationPath{
+		Components: []hdwallet.PathComponent{
+			{Index: 44, Hardened: true},
+			{Index: 60, Hardened: true},
+			{Index: 0, Hardened: true},
+			{Index: 0, Hardened: false},
+			{Index: 0, Hardened: false},
 		},
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.path.IsBIP44(); got != tt.want {
-				t.Errorf("hdwallet.DerivationPath.IsBIP44() = %v, want %v", got, tt.want)
-			}
-		})
+	components := path.BipComponents()
+	expected := hdwallet.BipComponents{
+		Purpose:    44,
+		CoinType:   60,
+		Account:    0,
+		Change:     0,
+		AddressIdx: 0,
 	}
+	require.Equal(t, expected, components)
 }
