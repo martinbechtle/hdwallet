@@ -37,6 +37,9 @@ func main() {
 }
 ```
 
+You can then get the public portion of the key and use ethereum-specific libraries to infer the address and produce
+signatures.
+
 ### Solana
 
 ```go
@@ -46,4 +49,3 @@ if err != nil {
 }
 log.Println(hex.EncodeToString(derivedKey))
 ```
-
