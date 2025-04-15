@@ -1,6 +1,6 @@
 module github.com/martinbechtle/hdwallet
 
-go 1.24.2
+go 1.23.6
 
 require (
 	github.com/btcsuite/btcd v0.24.2
