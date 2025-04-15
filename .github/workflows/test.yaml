@@ -1,0 +1,65 @@
+name: test
+
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize]
+
+concurrency: # cancel in-progress actions upon new branch push on the same PR
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false # no point in using this cache, it's entirely invalidated when changing go module deps
+
+      # instead let's use the standard Go caching modules, which has the ability to fall back to multiple restore keys
+      - name: Go modules cache
+        id: cache-go-mod
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-go-mod
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-gomod-${{ hashFiles('go.sum') }}
+          # if linux-gomod-<hash> doesn't exist, fall back to linux-gomod-* from either this branch or, if not found, from the main branch cache
+          restore-keys: |
+            ${{ runner.os }}-gomod-
+
+      # let's also use the go test cache
+      - name: Go build cache
+        id: cache-go-build
+        uses: actions/cache@v4
+        env:
+          cache-name: cache-go-build
+        with:
+          path: ~/.cache/go-build
+          key: ${{ runner.os }}-gobuild-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-gobuild-
+
+      - name: Check tidy
+        run: |
+          make tidy/check
+
+      - name: Check fmt
+        run: |
+          make fmt/check
+
+      - name: Run tests
+        run: |
+          make test
