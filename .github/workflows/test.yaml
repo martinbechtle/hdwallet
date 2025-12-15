@@ -30,7 +30,7 @@ jobs:
       # instead let's use the standard Go caching modules, which has the ability to fall back to multiple restore keys
       - name: Go modules cache
         id: cache-go-mod
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         env:
           cache-name: cache-go-mod
         with:
@@ -43,7 +43,7 @@ jobs:
       # let's also use the go test cache
       - name: Go build cache
         id: cache-go-build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         env:
           cache-name: cache-go-build
         with:
